@@ -28,52 +28,20 @@ helm repo update
 echo "Creating monitoring namespace..."
 kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
 
-# Check if NFS storage is available
-NFS_AVAILABLE=false
-if kubectl get storageclass nfs-client &>/dev/null; then
-  NFS_AVAILABLE=true
-  echo "NFS storage detected - using persistent storage"
-else
-  echo "NFS storage not found - using emptyDir (data will be lost on pod restart)"
-fi
-
 # Install kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
 echo "Installing Prometheus + Grafana..."
-if [ "$NFS_AVAILABLE" = true ]; then
-  # Install with NFS persistent storage
-  helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-    --namespace monitoring \
-    --set prometheus.prometheusSpec.retention=7d \
-    --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=nfs-prometheus \
-    --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
-    --set grafana.persistence.enabled=true \
-    --set grafana.persistence.storageClassName=nfs-grafana \
-    --set grafana.persistence.size=5Gi \
-    --set grafana.adminPassword=admin \
-    --set grafana.service.type=NodePort \
-    --set grafana.service.nodePort=30080 \
-    --set prometheus.service.type=NodePort \
-    --set prometheus.service.nodePort=30090 \
-    --set alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.storageClassName=nfs-alertmanager \
-    --set alertmanager.alertmanagerSpec.storage.volumeClaimTemplate.spec.resources.requests.storage=5Gi \
-    --set alertmanager.service.type=NodePort \
-    --set alertmanager.service.nodePort=30093 \
-    --wait --timeout=10m
-else
-  # Install without persistent storage
-  helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-    --namespace monitoring \
-    --set prometheus.prometheusSpec.retention=7d \
-    --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
-    --set grafana.adminPassword=admin \
-    --set grafana.service.type=NodePort \
-    --set grafana.service.nodePort=30080 \
-    --set prometheus.service.type=NodePort \
-    --set prometheus.service.nodePort=30090 \
-    --set alertmanager.service.type=NodePort \
-    --set alertmanager.service.nodePort=30093 \
-    --wait --timeout=10m
-fi
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --set prometheus.prometheusSpec.retention=7d \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi \
+  --set grafana.adminPassword=admin \
+  --set grafana.service.type=NodePort \
+  --set grafana.service.nodePort=30080 \
+  --set prometheus.service.type=NodePort \
+  --set prometheus.service.nodePort=30090 \
+  --set alertmanager.service.type=NodePort \
+  --set alertmanager.service.nodePort=30093 \
+  --wait --timeout=10m
 
 # Install Loki for log aggregation
 echo "Installing Loki..."
