@@ -1,0 +1,336 @@
+# ============================================================================
+# Homelabs .gitignore
+# For Vagrant, Terraform, Kubernetes, and general development
+# ============================================================================
+
+# ============================================================================
+# Vagrant
+# ============================================================================
+.vagrant/
+*.box
+.vagrant.d/
+*.log
+
+# Vagrant backup files
+*.bak
+Vagrantfile.bak
+
+# ============================================================================
+# Terraform
+# ============================================================================
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Terraform plan files
+*.tfplan
+*.tfplan.json
+
+# Terraform lock file (optional - some prefer to commit this)
+# .terraform.lock.hcl
+
+# ============================================================================
+# Kubernetes / k3s
+# ============================================================================
+# Kubeconfig files (contains cluster credentials)
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+config.yaml
+.kube/config
+.kube/cache/
+.kube/http-cache/
+
+# k3s tokens
+k3s-token
+node-token
+*.token
+
+# Helm
+.helm/
+charts/*.tgz
+
+# ============================================================================
+# SSH Keys (IMPORTANT - Never commit private keys!)
+# ============================================================================
+*.pem
+*.key
+*.ppk
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.cer
+*.crt
+*.p12
+*.pfx
+
+# SSH known_hosts (can contain sensitive info)
+known_hosts
+known_hosts.old
+
+# ============================================================================
+# Secrets & Credentials
+# ============================================================================
+secrets.yaml
+secrets.yml
+secrets.json
+*-secrets.yaml
+*-secrets.yml
+.secrets/
+credentials/
+*.credentials
+.env
+.env.*
+!.env.example
+passwords.txt
+
+# ============================================================================
+# macOS
+# ============================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# ============================================================================
+# Linux
+# ============================================================================
+*~
+.nfs*
+.directory
+.Trash-*
+
+# ============================================================================
+# Windows
+# ============================================================================
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# ============================================================================
+# IDEs and Editors
+# ============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+.history/
+
+# JetBrains IDEs (IntelliJ, PyCharm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+tags
+[._]*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ============================================================================
+# Backup and Temporary Files
+# ============================================================================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+*.backup
+backup/
+backups/
+tmp/
+temp/
+
+# ============================================================================
+# Archives (usually shouldn't be in git)
+# ============================================================================
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+*.bz2
+*.gz
+*.xz
+
+# ============================================================================
+# Logs
+# ============================================================================
+*.log
+logs/
+log/
+*.out
+
+# ============================================================================
+# Cache Directories
+# ============================================================================
+.cache/
+cache/
+*.cache
+
+# ============================================================================
+# Custom Scripts Output
+# ============================================================================
+# Generated files from your scripts
+*.generated
+generated/
+
+# VirtualBox VM exports
+*.ova
+*.ovf
+
+# ISO files
+*.iso
+
+# ============================================================================
+# Testing and Coverage
+# ============================================================================
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# ============================================================================
+# Documentation Build Artifacts
+# ============================================================================
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# ============================================================================
+# Node.js (if you add any node-based tools)
+# ============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ============================================================================
+# Python (if you add any Python tools)
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# ============================================================================
+# Project-specific
+# ============================================================================
+# Kubeconfig copies
+config-homelabs
+.kube/config-homelabs
+
+# Temporary test files
+test-*
+scratch/
+playground/
+
+# Local notes and documentation
+NOTES.md
+TODO.md
+PRIVATE.md
+notes/
+drafts/
+
+# ============================================================================
+# Keep These Files (Whitelist)
+# ============================================================================
+# Allow .gitkeep files
+!.gitkeep
+
+# Allow example/template files
+!*.example
+!*.template
+!.env.example
+!secrets.yaml.example
+
+# Allow documentation
+!README.md
+!*.md
+!docs/
+
+# ============================================================================
+# Optional: Uncomment if you want to ignore kubeconfig entirely
+# ============================================================================
+# ~/.kube/config
+# kubeconfig*
+
+# ============================================================================
+# Optional: Uncomment if you want to track some Terraform files
+# ============================================================================
+# !terraform.tfvars.example
+# !example.tfvars
+
