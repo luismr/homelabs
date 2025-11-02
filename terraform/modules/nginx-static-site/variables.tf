@@ -13,6 +13,12 @@ variable "namespace" {
   type        = string
 }
 
+variable "environment" {
+  description = "Environment (production, staging, development)"
+  type        = string
+  default     = "development"
+}
+
 variable "replicas" {
   description = "Number of nginx replicas"
   type        = number

@@ -26,10 +26,17 @@ module "pudim_dev" {
   site_name         = "pudim-dev"
   domain            = "pudim.dev"
   namespace         = kubernetes_namespace.static_sites.metadata[0].name
-  replicas          = 2
+  environment       = "production"  # PRODUCTION site
+  replicas          = 3              # Increased for production
   enable_nfs        = var.enable_nfs_storage
   storage_class     = var.storage_class
   storage_size      = "1Gi"
+  
+  # Production resource limits
+  resource_limits_cpu      = "200m"
+  resource_limits_memory   = "256Mi"
+  resource_requests_cpu    = "100m"
+  resource_requests_memory = "128Mi"
   
   depends_on = [kubernetes_namespace.static_sites]
 }
@@ -40,10 +47,17 @@ module "luismachadoreis_dev" {
   site_name         = "luismachadoreis-dev"
   domain            = "luismachadoreis.dev"
   namespace         = kubernetes_namespace.static_sites.metadata[0].name
-  replicas          = 2
+  environment       = "production"  # PRODUCTION site
+  replicas          = 3              # Increased for production
   enable_nfs        = var.enable_nfs_storage
   storage_class     = var.storage_class
   storage_size      = "1Gi"
+  
+  # Production resource limits
+  resource_limits_cpu      = "200m"
+  resource_limits_memory   = "256Mi"
+  resource_requests_cpu    = "100m"
+  resource_requests_memory = "128Mi"
   
   depends_on = [kubernetes_namespace.static_sites]
 }
@@ -54,6 +68,7 @@ module "carimbo_vip" {
   site_name         = "carimbo-vip"
   domain            = "carimbo.vip"
   namespace         = kubernetes_namespace.static_sites.metadata[0].name
+  environment       = "staging"  # Staging/development site
   replicas          = 2
   enable_nfs        = var.enable_nfs_storage
   storage_class     = var.storage_class

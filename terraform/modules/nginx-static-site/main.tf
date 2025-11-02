@@ -6,9 +6,10 @@ resource "kubernetes_persistent_volume_claim" "site_content" {
     name      = "${var.site_name}-content"
     namespace = var.namespace
     labels = {
-      app        = var.site_name
-      domain     = var.domain
-      managed-by = "terraform"
+      app         = var.site_name
+      domain      = var.domain
+      environment = var.environment
+      managed-by  = "terraform"
     }
   }
   
@@ -30,9 +31,10 @@ resource "kubernetes_config_map" "default_content" {
     name      = "${var.site_name}-default-content"
     namespace = var.namespace
     labels = {
-      app        = var.site_name
-      domain     = var.domain
-      managed-by = "terraform"
+      app         = var.site_name
+      domain      = var.domain
+      environment = var.environment
+      managed-by  = "terraform"
     }
   }
   
@@ -100,9 +102,10 @@ resource "kubernetes_deployment" "site" {
     name      = var.site_name
     namespace = var.namespace
     labels = {
-      app        = var.site_name
-      domain     = var.domain
-      managed-by = "terraform"
+      app         = var.site_name
+      domain      = var.domain
+      environment = var.environment
+      managed-by  = "terraform"
     }
   }
   
@@ -118,8 +121,9 @@ resource "kubernetes_deployment" "site" {
     template {
       metadata {
         labels = {
-          app    = var.site_name
-          domain = var.domain
+          app         = var.site_name
+          domain      = var.domain
+          environment = var.environment
         }
       }
       
@@ -230,9 +234,10 @@ resource "kubernetes_service" "site" {
     name      = var.site_name
     namespace = var.namespace
     labels = {
-      app        = var.site_name
-      domain     = var.domain
-      managed-by = "terraform"
+      app         = var.site_name
+      domain      = var.domain
+      environment = var.environment
+      managed-by  = "terraform"
     }
     annotations = {
       "cloudflare-tunnel/hostname" = var.domain
