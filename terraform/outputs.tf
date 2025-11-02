@@ -1,6 +1,10 @@
-output "static_sites_namespace" {
-  description = "Namespace where static sites are deployed"
-  value       = kubernetes_namespace.static_sites.metadata[0].name
+output "namespaces" {
+  description = "The namespaces for each domain"
+  value = {
+    pudim_dev           = kubernetes_namespace.pudim_dev.metadata[0].name
+    luismachadoreis_dev = kubernetes_namespace.luismachadoreis_dev.metadata[0].name
+    carimbo_vip         = kubernetes_namespace.carimbo_vip.metadata[0].name
+  }
 }
 
 output "pudim_dev_service" {
