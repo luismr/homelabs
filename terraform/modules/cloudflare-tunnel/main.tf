@@ -29,31 +29,29 @@ resource "kubernetes_config_map" "tunnel_config" {
   
   data = {
     "config.yaml" = <<-EOF
-      tunnel: ${var.tunnel_token != "" ? "auto" : "placeholder"}
-      credentials-file: /etc/cloudflared/token
       metrics: 0.0.0.0:2000
       no-autoupdate: true
       
       ingress:
-        # pudim.dev
+        # pudim.dev -> static-site service in pudim-dev namespace
         - hostname: pudim.dev
-          service: http://pudim-dev.${var.namespace}.svc.cluster.local:80
+          service: http://static-site.pudim-dev.svc.cluster.local:80
         - hostname: www.pudim.dev
-          service: http://pudim-dev.${var.namespace}.svc.cluster.local:80
+          service: http://static-site.pudim-dev.svc.cluster.local:80
         
-        # luismachadoreis.dev
+        # luismachadoreis.dev -> static-site service in luismachadoreis-dev namespace
         - hostname: luismachadoreis.dev
-          service: http://luismachadoreis-dev.${var.namespace}.svc.cluster.local:80
+          service: http://static-site.luismachadoreis-dev.svc.cluster.local:80
         - hostname: www.luismachadoreis.dev
-          service: http://luismachadoreis-dev.${var.namespace}.svc.cluster.local:80
+          service: http://static-site.luismachadoreis-dev.svc.cluster.local:80
         
-        # carimbo.vip
+        # carimbo.vip -> static-site service in carimbo-vip namespace
         - hostname: carimbo.vip
-          service: http://carimbo-vip.${var.namespace}.svc.cluster.local:80
+          service: http://static-site.carimbo-vip.svc.cluster.local:80
         - hostname: www.carimbo.vip
-          service: http://carimbo-vip.${var.namespace}.svc.cluster.local:80
+          service: http://static-site.carimbo-vip.svc.cluster.local:80
         
-        # Catch-all rule
+        # Catch-all rule (return 404 for unknown hosts)
         - service: http_status:404
     EOF
   }
@@ -104,16 +102,20 @@ resource "kubernetes_deployment" "tunnel" {
             protocol       = "TCP"
           }
           
+          env {
+            name = "TUNNEL_TOKEN"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.tunnel_credentials.metadata[0].name
+                key  = "token"
+              }
+            }
+          }
+          
           volume_mount {
             name       = "config"
             mount_path = "/etc/cloudflared/config.yaml"
             sub_path   = "config.yaml"
-            read_only  = true
-          }
-          
-          volume_mount {
-            name       = "credentials"
-            mount_path = "/etc/cloudflared"
             read_only  = true
           }
           
@@ -152,17 +154,6 @@ resource "kubernetes_deployment" "tunnel" {
           name = "config"
           config_map {
             name = kubernetes_config_map.tunnel_config.metadata[0].name
-          }
-        }
-        
-        volume {
-          name = "credentials"
-          secret {
-            secret_name = kubernetes_secret.tunnel_credentials.metadata[0].name
-            items {
-              key  = "token"
-              path = "token"
-            }
           }
         }
       }

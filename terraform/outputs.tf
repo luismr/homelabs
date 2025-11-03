@@ -13,7 +13,6 @@ output "pudim_dev" {
     namespace   = module.pudim_dev.namespace
     service     = module.pudim_dev.service_name
     url         = module.pudim_dev.site_url
-    tunnel      = module.pudim_dev.cloudflare_tunnel_deployed
   }
 }
 
@@ -32,6 +31,17 @@ output "carimbo_vip" {
     namespace = module.carimbo_vip.namespace
     service   = module.carimbo_vip.service_name
     url       = module.carimbo_vip.site_url
+  }
+}
+
+output "cloudflare_tunnel_info" {
+  description = "Cloudflare Tunnel deployment information (if enabled)"
+  value = length(module.cloudflare_tunnel) > 0 ? {
+    namespace = module.cloudflare_tunnel[0].namespace
+    service   = module.cloudflare_tunnel[0].service_name
+  } : {
+    namespace = "N/A"
+    service   = "Cloudflare Tunnel not deployed (token is empty)."
   }
 }
 

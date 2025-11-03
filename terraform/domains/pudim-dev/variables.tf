@@ -10,10 +10,3 @@ variable "storage_class" {
   default     = "nfs-client"
 }
 
-variable "cloudflare_tunnel_token" {
-  description = "Cloudflare Tunnel token (optional)"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-

@@ -1,3 +1,28 @@
+# Create a dedicated namespace for the Cloudflare Tunnel
+resource "kubernetes_namespace" "cloudflare_tunnel" {
+  count = var.cloudflare_tunnel_token != "" ? 1 : 0
+
+  metadata {
+    name = "cloudflare-tunnel"
+    labels = {
+      name        = "cloudflare-tunnel"
+      managed-by  = "terraform"
+    }
+  }
+}
+
+# Deploy the shared Cloudflare Tunnel
+module "cloudflare_tunnel" {
+  count = var.cloudflare_tunnel_token != "" ? 1 : 0
+  
+  source = "./modules/cloudflare-tunnel"
+  
+  tunnel_token = var.cloudflare_tunnel_token
+  namespace    = kubernetes_namespace.cloudflare_tunnel[0].metadata[0].name
+
+  depends_on = [kubernetes_namespace.cloudflare_tunnel]
+}
+
 # Orchestrate all domain deployments
 # Each domain has its own module in domains/ folder
 
@@ -7,7 +32,6 @@ module "pudim_dev" {
   
   enable_nfs_storage       = var.enable_nfs_storage
   storage_class            = var.storage_class
-  cloudflare_tunnel_token  = var.cloudflare_tunnel_token
 }
 
 # Deploy luismachadoreis.dev domain

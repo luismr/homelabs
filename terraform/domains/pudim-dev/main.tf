@@ -33,13 +33,3 @@ module "pudim_dev_site" {
   depends_on = [kubernetes_namespace.pudim_dev]
 }
 
-# Deploy Cloudflare Tunnel (optional - only for pudim.dev)
-module "cloudflare_tunnel" {
-  count = var.cloudflare_tunnel_token != "" ? 1 : 0
-  
-  source = "../../modules/cloudflare-tunnel"
-  
-  tunnel_token = var.cloudflare_tunnel_token
-  namespace    = kubernetes_namespace.pudim_dev.metadata[0].name
-}
-

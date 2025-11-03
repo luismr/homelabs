@@ -13,8 +13,3 @@ output "site_url" {
   value       = "https://pudim.dev"
 }
 
-output "cloudflare_tunnel_deployed" {
-  description = "Whether Cloudflare Tunnel is deployed"
-  value       = length(module.cloudflare_tunnel) > 0
-}
-
