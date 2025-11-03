@@ -50,21 +50,23 @@ Your Services (nginx sites)
 
 8. Click **Next** (don't install connector yet - Terraform will do this)
 
-9. Configure **Public Hostnames**:
+9. Configure **Public Hostnames** (Optional - config.yaml handles this):
    - **pudim.dev**
      - Subdomain: *(leave empty)*
      - Domain: pudim.dev
-     - Service: http://pudim-dev.static-sites.svc.cluster.local:80
+     - Service: http://static-site.pudim-dev.svc.cluster.local:80
    
    - **luismachadoreis.dev**
      - Subdomain: *(leave empty)*
      - Domain: luismachadoreis.dev
-     - Service: http://luismachadoreis-dev.static-sites.svc.cluster.local:80
+     - Service: http://static-site.luismachadoreis-dev.svc.cluster.local:80
    
    - **carimbo.vip**
      - Subdomain: *(leave empty)*
      - Domain: carimbo.vip
-     - Service: http://carimbo-vip.static-sites.svc.cluster.local:80
+     - Service: http://static-site.carimbo-vip.svc.cluster.local:80
+   
+   **Note**: With token-based tunnels, the ingress rules in config.yaml automatically configure these hostnames.
 
 10. Click **Save tunnel**
 
@@ -118,10 +120,10 @@ terraform apply
 export KUBECONFIG=~/.kube/config-homelabs
 
 # Check tunnel pods
-kubectl get pods -n static-sites -l app=cloudflare-tunnel
+kubectl get pods -n cloudflare-tunnel
 
 # Check logs
-kubectl logs -n static-sites -l app=cloudflare-tunnel
+kubectl logs -n cloudflare-tunnel -l app=cloudflare-tunnel
 ```
 
 You should see output like:
@@ -178,42 +180,52 @@ Or visit in a browser:
 
 ### Default Configuration
 
-The tunnel is configured to route traffic based on hostname:
+The tunnel is configured to route traffic based on hostname. Each domain has its own namespace with a standardized service name (`static-site`):
 
 ```yaml
 ingress:
+  # pudim.dev -> static-site service in pudim-dev namespace
   - hostname: pudim.dev
-    service: http://pudim-dev.static-sites.svc.cluster.local:80
-  
+    service: http://static-site.pudim-dev.svc.cluster.local:80
   - hostname: www.pudim.dev
-    service: http://pudim-dev.static-sites.svc.cluster.local:80
+    service: http://static-site.pudim-dev.svc.cluster.local:80
   
+  # luismachadoreis.dev -> static-site service in luismachadoreis-dev namespace
   - hostname: luismachadoreis.dev
-    service: http://luismachadoreis-dev.static-sites.svc.cluster.local:80
-  
+    service: http://static-site.luismachadoreis-dev.svc.cluster.local:80
   - hostname: www.luismachadoreis.dev
-    service: http://luismachadoreis-dev.static-sites.svc.cluster.local:80
+    service: http://static-site.luismachadoreis-dev.svc.cluster.local:80
   
+  # carimbo.vip -> static-site service in carimbo-vip namespace
   - hostname: carimbo.vip
-    service: http://carimbo-vip.static-sites.svc.cluster.local:80
-  
+    service: http://static-site.carimbo-vip.svc.cluster.local:80
   - hostname: www.carimbo.vip
-    service: http://carimbo-vip.static-sites.svc.cluster.local:80
+    service: http://static-site.carimbo-vip.svc.cluster.local:80
   
-  - service: http_status:404  # Catch-all
+  # Catch-all rule (return 404 for unknown hosts)
+  - service: http_status:404
 ```
+
+**Key Architecture Points:**
+- Each domain has its own Kubernetes namespace for isolation
+- All sites use the standardized service name `static-site` within their namespace
+- Cloudflare Tunnel runs in its own `cloudflare-tunnel` namespace
+- Tunnel uses token-based authentication (no certificate files needed)
 
 ### Add More Hostnames
 
-Edit `terraform/modules/cloudflare-tunnel/main.tf` and add to the ingress rules:
+1. Create a new domain module in `terraform/domains/newsite-com/`
+2. Add the module call in `terraform/main.tf`
+3. Edit `terraform/modules/cloudflare-tunnel/main.tf` and add to the ingress rules:
 
 ```yaml
 - hostname: newsite.com
-  service: http://newsite-com.static-sites.svc.cluster.local:80
+  service: http://static-site.newsite-com.svc.cluster.local:80
 ```
 
 Then apply:
 ```bash
+cd terraform
 terraform apply
 ```
 
@@ -223,13 +235,13 @@ terraform apply
 
 ```bash
 # Pod status
-kubectl get pods -n static-sites -l app=cloudflare-tunnel
+kubectl get pods -n cloudflare-tunnel
 
 # Logs
-kubectl logs -n static-sites -l app=cloudflare-tunnel -f
+kubectl logs -n cloudflare-tunnel -l app=cloudflare-tunnel -f
 
 # Metrics endpoint
-kubectl port-forward -n static-sites svc/cloudflare-tunnel-metrics 2000:2000
+kubectl port-forward -n cloudflare-tunnel svc/cloudflare-tunnel-metrics 2000:2000
 # Visit http://localhost:2000/metrics
 ```
 
@@ -248,7 +260,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: cloudflare-tunnel
-  namespace: static-sites
+  namespace: cloudflare-tunnel
 spec:
   selector:
     matchLabels:
@@ -264,23 +276,23 @@ spec:
 
 **Check tunnel token**:
 ```bash
-kubectl get secret -n static-sites cloudflare-tunnel-token -o jsonpath='{.data.token}' | base64 -d
+kubectl get secret -n cloudflare-tunnel cloudflare-tunnel-token -o jsonpath='{.data.token}' | base64 -d
 ```
 
 **Check logs**:
 ```bash
-kubectl logs -n static-sites -l app=cloudflare-tunnel
+kubectl logs -n cloudflare-tunnel -l app=cloudflare-tunnel
 ```
 
 Look for errors like:
 - `Authentication error`: Invalid token
-- `Connection refused`: Service not reachable
-- `Tunnel credentials file not found`: Secret not mounted correctly
+- `Connection refused`: Service not reachable  
+- `Cannot determine default origin certificate path`: This is a warning and can be ignored when using token-based auth
 
 **Verify services are running**:
 ```bash
-kubectl get svc -n static-sites
-kubectl get endpoints -n static-sites
+kubectl get svc -A | grep static-site
+kubectl get endpoints -A | grep static-site
 ```
 
 ### Sites Not Accessible
@@ -299,12 +311,12 @@ kubectl get endpoints -n static-sites
 3. **Test internal connectivity**:
    ```bash
    kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
-     curl -v http://pudim-dev.static-sites.svc.cluster.local
+     curl -v http://static-site.pudim-dev.svc.cluster.local
    ```
 
 4. **Check tunnel configuration**:
    ```bash
-   kubectl get configmap -n static-sites cloudflare-tunnel-config -o yaml
+   kubectl get configmap -n cloudflare-tunnel cloudflare-tunnel-config -o yaml
    ```
 
 ### DNS Not Resolving
@@ -326,13 +338,13 @@ This usually means the service is unreachable:
 
 ```bash
 # Check if pods are running
-kubectl get pods -n static-sites
+kubectl get pods -n pudim-dev
 
 # Check if services have endpoints
-kubectl get endpoints -n static-sites
+kubectl get endpoints -n pudim-dev
 
 # Restart deployment
-kubectl rollout restart deployment/pudim-dev -n static-sites
+kubectl rollout restart deployment/pudim-dev -n pudim-dev
 ```
 
 ## Security
@@ -380,7 +392,7 @@ Add custom headers in tunnel configuration:
 ```yaml
 ingress:
   - hostname: pudim.dev
-    service: http://pudim-dev.static-sites.svc.cluster.local:80
+    service: http://static-site.pudim-dev.svc.cluster.local:80
     originRequest:
       httpHostHeader: pudim.dev
       noTLSVerify: false
@@ -470,20 +482,22 @@ Access at: `http://localhost:8080`
 
 ```bash
 # Check tunnel status
-kubectl get pods -n static-sites -l app=cloudflare-tunnel
+kubectl get pods -n cloudflare-tunnel
 
 # View logs
-kubectl logs -n static-sites -l app=cloudflare-tunnel -f
+kubectl logs -n cloudflare-tunnel -l app=cloudflare-tunnel -f
 
 # Restart tunnel
-kubectl rollout restart deployment/cloudflare-tunnel -n static-sites
+kubectl rollout restart deployment/cloudflare-tunnel -n cloudflare-tunnel
 
 # Update configuration
 # Edit terraform/modules/cloudflare-tunnel/main.tf
-terraform apply
+cd terraform && terraform apply
 
 # Test connectivity
 curl -I https://pudim.dev
+curl -I https://luismachadoreis.dev
+curl -I https://carimbo.vip
 ```
 
 ### URLs

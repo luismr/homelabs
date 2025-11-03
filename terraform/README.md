@@ -22,29 +22,37 @@ This directory contains Terraform configurations to manage Kubernetes deployment
 ┌──────────────────────────▼──────────────────────────────────┐
 │                  Kubernetes Cluster                          │
 │                                                              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Namespace: static-sites                              │   │
-│  │                                                       │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────┐ │   │
-│  │  │ pudim-dev    │  │luismachadoreis│  │carimbo-vip│ │   │
-│  │  │ Deployment   │  │-dev Deployment│  │Deployment │ │   │
-│  │  │ (nginx x2)   │  │ (nginx x2)    │  │(nginx x2) │ │   │
-│  │  └──────┬───────┘  └──────┬────────┘  └─────┬─────┘ │   │
-│  │         │                 │                  │       │   │
-│  │  ┌──────▼───────┐  ┌──────▼────────┐  ┌─────▼─────┐ │   │
-│  │  │ Service      │  │ Service       │  │ Service   │ │   │
-│  │  │ ClusterIP    │  │ ClusterIP     │  │ ClusterIP │ │   │
-│  │  └──────────────┘  └───────────────┘  └───────────┘ │   │
-│  │                                                       │   │
-│  │  ┌─────────────────────────────────────────────────┐ │   │
-│  │  │ Cloudflare Tunnel (cloudflared x2)              │ │   │
-│  │  │ Routes traffic to services                      │ │   │
-│  │  └─────────────────────────────────────────────────┘ │   │
-│  │                                                       │   │
-│  │  ┌─────────────────────────────────────────────────┐ │   │
-│  │  │ NFS Persistent Volumes (Content Storage)        │ │   │
-│  │  └─────────────────────────────────────────────────┘ │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ Namespace: pudim-dev             (Production)        │  │
+│  │  ┌─────────────┐   ┌──────────┐   ┌────────────┐   │  │
+│  │  │ Deployment  │──▶│ Service  │   │ PVC (NFS)  │   │  │
+│  │  │ (nginx x3)  │   │ClusterIP │   │    1Gi     │   │  │
+│  │  └─────────────┘   │static-site   └────────────┘   │  │
+│  └─────────────────────────┴──────────────────────────┘  │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ Namespace: luismachadoreis-dev   (Production)        │  │
+│  │  ┌─────────────┐   ┌──────────┐   ┌────────────┐   │  │
+│  │  │ Deployment  │──▶│ Service  │   │ PVC (NFS)  │   │  │
+│  │  │ (nginx x3)  │   │ClusterIP │   │    1Gi     │   │  │
+│  │  └─────────────┘   │static-site   └────────────┘   │  │
+│  └─────────────────────────┴──────────────────────────┘  │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ Namespace: carimbo-vip           (Production)        │  │
+│  │  ┌─────────────┐   ┌──────────┐   ┌────────────┐   │  │
+│  │  │ Deployment  │──▶│ Service  │   │ PVC (NFS)  │   │  │
+│  │  │ (nginx x3)  │   │ClusterIP │   │    1Gi     │   │  │
+│  │  └─────────────┘   │static-site   └────────────┘   │  │
+│  └─────────────────────────┴──────────────────────────┘  │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ Namespace: cloudflare-tunnel     (Shared)            │  │
+│  │  ┌─────────────────────────────────────────────────┐ │  │
+│  │  │ Cloudflare Tunnel (cloudflared x2)              │ │  │
+│  │  │ Token-based auth, routes to all domains         │ │  │
+│  │  └─────────────────────────────────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,16 +64,30 @@ terraform/
 ├── versions.tf                        ← Terraform & provider versions
 ├── providers.tf                       ← Kubernetes & Helm provider config
 ├── variables.tf                       ← Input variables
-├── main.tf                            ← Main configuration
+├── main.tf                            ← Main orchestrator
 ├── outputs.tf                         ← Output values
 ├── terraform.tfvars.example           ← Example variables file
 ├── terraform.tfvars                   ← Your variables (gitignored)
-└── modules/
-    ├── nginx-static-site/             ← Reusable site module
+├── domains/                           ← Domain-specific modules
+│   ├── README.md                      ← Domain module documentation
+│   ├── pudim-dev/                     ← pudim.dev configuration
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── luismachadoreis-dev/           ← luismachadoreis.dev config
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── carimbo-vip/                   ← carimbo.vip configuration
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+└── modules/                           ← Reusable modules
+    ├── nginx-static-site/             ← Generic site module
     │   ├── main.tf
     │   ├── variables.tf
     │   └── outputs.tf
-    └── cloudflare-tunnel/             ← Cloudflare tunnel module
+    └── cloudflare-tunnel/             ← Shared tunnel module
         ├── main.tf
         ├── variables.tf
         └── outputs.tf
@@ -124,11 +146,11 @@ terraform plan
 ```
 
 Review the planned changes. You should see:
-- 1 namespace (static-sites)
-- 3 deployments (one per site)
-- 3 services (ClusterIP)
-- 3 PVCs (if NFS enabled)
-- 1 Cloudflare Tunnel deployment
+- 4 namespaces (pudim-dev, luismachadoreis-dev, carimbo-vip, cloudflare-tunnel)
+- 3 deployments (one per site, 3 replicas each)
+- 3 services (ClusterIP, all named "static-site")
+- 3 PVCs (if NFS enabled, 1Gi each)
+- 1 Cloudflare Tunnel deployment (2 replicas, shared)
 
 ### 4. Apply Configuration
 
@@ -141,17 +163,20 @@ Type `yes` to confirm.
 ### 5. Verify Deployment
 
 ```bash
-# Check pods
-kubectl get pods -n static-sites
+# Check all site pods
+kubectl get pods -A | grep -E "(pudim|luis|carimbo)"
+
+# Check tunnel pods
+kubectl get pods -n cloudflare-tunnel
 
 # Check services
-kubectl get svc -n static-sites
+kubectl get svc -A | grep static-site
 
 # Check PVCs
-kubectl get pvc -n static-sites
+kubectl get pvc -A
 
 # Test locally (port-forward)
-kubectl port-forward -n static-sites svc/pudim-dev 8080:80
+kubectl port-forward -n pudim-dev svc/static-site 8080:80
 # Open http://localhost:8080
 ```
 
@@ -159,11 +184,17 @@ kubectl port-forward -n static-sites svc/pudim-dev 8080:80
 
 After deployment, these sites will be available:
 
-| Site | Domain | Service Name | Replicas |
-|------|--------|--------------|----------|
-| Pudim | pudim.dev | pudim-dev | 2 |
-| Luis Machado Reis | luismachadoreis.dev | luismachadoreis-dev | 2 |
-| Carimbo | carimbo.vip | carimbo-vip | 2 |
+| Site | Domain | Namespace | Service Name | Replicas | Environment |
+|------|--------|-----------|--------------|----------|-------------|
+| Pudim | pudim.dev | pudim-dev | static-site | 3 | Production |
+| Luis Machado Reis | luismachadoreis.dev | luismachadoreis-dev | static-site | 3 | Production |
+| Carimbo | carimbo.vip | carimbo-vip | static-site | 3 | Production |
+
+**Architecture Notes:**
+- Each domain has its own isolated namespace
+- All services use the standardized name `static-site` within their namespace
+- Cloudflare Tunnel runs in a separate `cloudflare-tunnel` namespace (2 replicas)
+- Full DNS name format: `http://static-site.<namespace>.svc.cluster.local:80`
 
 ## DNS Configuration
 
@@ -205,7 +236,7 @@ From Cloudflare Dashboard: Zero Trust > Networks > Tunnels > Your Tunnel > Copy 
 
 ```bash
 # Copy files to a running pod
-kubectl cp ./my-site/index.html static-sites/pudim-dev-xxxxx:/usr/share/nginx/html/
+kubectl cp ./my-site/index.html pudim-dev/pudim-dev-xxxxx:/usr/share/nginx/html/
 
 # Or use helper script
 ./scripts/terraform-helper.sh update-content pudim-dev ./index.html
@@ -219,13 +250,15 @@ If using NFS storage, you can update content directly on the master node:
 # SSH to master
 ssh root@192.168.5.200
 
-# Navigate to site content
-cd /nfs/shared/static-sites-pudim-dev-content-*/
+# Navigate to site content (check actual PVC name)
+cd /nfs/shared/
+ls -la *pudim*
+cd pudim-dev-pudim-dev-content-pvc-*/
 
 # Update files
 vim index.html
 
-# Changes are immediately visible
+# Changes are immediately visible across all pods
 ```
 
 ### Method 3: Git-based Deployment (Advanced)
@@ -239,32 +272,65 @@ Create a CI/CD pipeline that:
 
 ### Add a New Site
 
-1. **Create a new module call** in `main.tf`:
+1. **Create a new domain module** in `terraform/domains/newsite-com/`:
+
+```bash
+mkdir -p terraform/domains/newsite-com
+```
+
+2. **Create `domains/newsite-com/main.tf`**:
 
 ```hcl
-module "newsite_com" {
-  source = "./modules/nginx-static-site"
+# Create namespace
+resource "kubernetes_namespace" "newsite_com" {
+  metadata {
+    name = "newsite-com"
+    labels = {
+      name        = "newsite-com"
+      domain      = "newsite.com"
+      environment = "production"
+      managed-by  = "terraform"
+    }
+  }
+}
+
+# Deploy site
+module "newsite_com_site" {
+  source = "../../modules/nginx-static-site"
   
-  site_name     = "newsite-com"
-  domain        = "newsite.com"
-  namespace     = kubernetes_namespace.static_sites.metadata[0].name
-  replicas      = 2
-  enable_nfs    = var.enable_nfs_storage
+  site_name    = "newsite-com"
+  domain       = "newsite.com"
+  namespace    = kubernetes_namespace.newsite_com.metadata[0].name
+  environment  = "production"
+  replicas     = 3
+  enable_nfs   = var.enable_nfs_storage
   storage_class = var.storage_class
-  storage_size  = "1Gi"
+  storage_size = "1Gi"
 }
 ```
 
-2. **Update Cloudflare Tunnel config** in `modules/cloudflare-tunnel/main.tf`:
+3. **Update root `main.tf`** to call the new domain module:
+
+```hcl
+module "newsite_com" {
+  source = "./domains/newsite-com"
+  
+  enable_nfs_storage = var.enable_nfs_storage
+  storage_class      = var.storage_class
+}
+```
+
+4. **Update Cloudflare Tunnel config** in `modules/cloudflare-tunnel/main.tf`:
 
 ```yaml
 - hostname: newsite.com
-  service: http://newsite-com.static-sites.svc.cluster.local:80
+  service: http://static-site.newsite-com.svc.cluster.local:80
 ```
 
-3. **Apply changes**:
+5. **Apply changes**:
 
 ```bash
+cd terraform
 terraform apply
 ```
 
@@ -303,10 +369,10 @@ module "pudim_dev" {
 
 ```bash
 # Site logs
-kubectl logs -n static-sites -l app=pudim-dev --tail=50 -f
+kubectl logs -n pudim-dev -l app=pudim-dev --tail=50 -f
 
 # Tunnel logs
-kubectl logs -n static-sites -l app=cloudflare-tunnel --tail=50 -f
+kubectl logs -n cloudflare-tunnel -l app=cloudflare-tunnel --tail=50 -f
 
 # Or use helper
 ./scripts/terraform-helper.sh logs pudim-dev
@@ -315,17 +381,17 @@ kubectl logs -n static-sites -l app=cloudflare-tunnel --tail=50 -f
 ### Check Status
 
 ```bash
-# All resources
-kubectl get all -n static-sites
+# All sites overview
+kubectl get pods -A | grep -E "(pudim|luis|carimbo)"
 
-# Deployments
-kubectl get deployments -n static-sites
+# Specific namespace
+kubectl get all -n pudim-dev
 
-# Pods
-kubectl get pods -n static-sites -o wide
+# All deployments
+kubectl get deployments -A | grep -E "(pudim|luis|carimbo)"
 
-# Services
-kubectl get svc -n static-sites
+# All services
+kubectl get svc -A | grep static-site
 
 # Or use helper
 ./scripts/terraform-helper.sh status
@@ -336,7 +402,7 @@ kubectl get svc -n static-sites
 The Cloudflare Tunnel exposes metrics on port 2000:
 
 ```bash
-kubectl port-forward -n static-sites svc/cloudflare-tunnel-metrics 2000:2000
+kubectl port-forward -n cloudflare-tunnel svc/cloudflare-tunnel-metrics 2000:2000
 
 # Access metrics at http://localhost:2000/metrics
 ```
@@ -347,30 +413,35 @@ kubectl port-forward -n static-sites svc/cloudflare-tunnel-metrics 2000:2000
 
 1. **Check pods are running**:
    ```bash
-   kubectl get pods -n static-sites
+   kubectl get pods -n pudim-dev
+   kubectl get pods -n cloudflare-tunnel
    ```
 
 2. **Check tunnel status**:
    ```bash
-   kubectl logs -n static-sites -l app=cloudflare-tunnel
+   kubectl logs -n cloudflare-tunnel -l app=cloudflare-tunnel
    ```
 
 3. **Verify DNS**:
    ```bash
    dig pudim.dev
+   curl -I https://pudim.dev
    ```
 
 4. **Test internal connectivity**:
    ```bash
    kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
-     curl http://pudim-dev.static-sites.svc.cluster.local
+     curl http://static-site.pudim-dev.svc.cluster.local
    ```
 
 ### PVC Not Binding
 
 ```bash
-# Check PVC status
-kubectl describe pvc -n static-sites
+# Check PVC status (all namespaces)
+kubectl get pvc -A
+
+# Describe specific PVC
+kubectl describe pvc pudim-dev-content -n pudim-dev
 
 # Check StorageClass
 kubectl get storageclass nfs-client
@@ -392,18 +463,18 @@ terraform show
 terraform state list
 
 # Import existing resource (if needed)
-terraform import kubernetes_namespace.static_sites static-sites
+terraform import module.pudim_dev.kubernetes_namespace.pudim_dev pudim-dev
 ```
 
 ## Maintenance
 
 ### Update Nginx Image
 
-Edit `main.tf`:
+Edit `domains/pudim-dev/main.tf`:
 
 ```hcl
-module "pudim_dev" {
-  source = "./modules/nginx-static-site"
+module "pudim_dev_site" {
+  source = "../../modules/nginx-static-site"
   
   nginx_image = "nginx:1.25-alpine"  # Specify version
   
@@ -413,6 +484,7 @@ module "pudim_dev" {
 
 Apply:
 ```bash
+cd terraform
 terraform apply
 ```
 

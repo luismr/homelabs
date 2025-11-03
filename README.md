@@ -297,32 +297,33 @@ Manage Kubernetes deployments declaratively with Terraform.
 
 ### Deployed Static Sites
 
-Three nginx-based static websites managed by Terraform:
+Three nginx-based static websites managed by Terraform, each in its own namespace:
 
 ```bash
 # View deployment status
 cd terraform
 terraform output
 
-# Sites:
-- pudim.dev           (2 replicas, NFS storage)
-- luismachadoreis.dev (2 replicas, NFS storage)
-- carimbo.vip         (2 replicas, NFS storage)
+# Sites (Production - 3 replicas each):
+- pudim.dev           → pudim-dev namespace
+- luismachadoreis.dev → luismachadoreis-dev namespace  
+- carimbo.vip         → carimbo-vip namespace
 ```
 
 ### Quick Commands
 
 ```bash
-# Check deployment status
-kubectl get all -n static-sites
+# Check all deployments
+kubectl get pods -A | grep -E "(pudim|luis|carimbo)"
 
-# View deployed sites
-kubectl get deployments -n static-sites
+# View specific site
+kubectl get all -n pudim-dev
 
 # Update site content (via NFS)
 ssh root@192.168.5.200
-cd /nfs/shared/static-sites-pudim-dev-content-*/
-# Edit your HTML files here
+cd /nfs/shared/
+ls -la *pudim*
+# Edit your HTML files
 
 # Or use helper script
 ./scripts/terraform-helper.sh status
