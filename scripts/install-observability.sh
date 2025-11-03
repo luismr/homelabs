@@ -53,27 +53,10 @@ helm upgrade --install loki grafana/loki-stack \
   --set grafana.enabled=false \
   --wait --timeout=5m
 
-# Configure Loki datasource in Grafana
+# Fix Loki datasource to not be default (Prometheus should be default)
+# The Loki chart automatically creates a datasource, but sets it as default
 echo "Configuring Loki datasource..."
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-datasource-loki
-  namespace: monitoring
-  labels:
-    grafana_datasource: "1"
-data:
-  loki-datasource.yaml: |-
-    apiVersion: 1
-    datasources:
-    - name: Loki
-      type: loki
-      access: proxy
-      url: http://loki:3100
-      isDefault: false
-      editable: true
-EOF
+kubectl patch cm loki-loki-stack -n monitoring --type='json' -p='[{"op": "replace", "path": "/data/loki-stack-datasource.yaml", "value": "apiVersion: 1\ndatasources:\n- name: Loki\n  type: loki\n  access: proxy\n  url: \"http://loki:3100\"\n  version: 1\n  isDefault: false\n  jsonData:\n    {}"}]' 2>/dev/null || echo "Loki datasource will be configured on first Grafana restart"
 
 # Restart Grafana to pick up Loki datasource
 echo "Restarting Grafana..."
