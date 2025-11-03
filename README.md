@@ -16,6 +16,94 @@ A Vagrant-managed 4-node Debian Bookworm cluster with bridged networking on a /2
 **DNS**: 8.8.8.8, 8.8.4.4  
 **Bridge Interface**: en2: Wi-Fi (AirPort)
 
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                           INTERNET                                  │
+│                              ↓                                      │
+│  ┌────────────────────────────────────────────────────────────┐   │
+│  │              Cloudflare Network (Global CDN)               │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │   │
+│  │  │  pudim.dev   │  │luismachado   │  │ carimbo.vip  │    │   │
+│  │  │   (DNS)      │  │ reis.dev     │  │   (DNS)      │    │   │
+│  │  │   CNAME ──────────▶ CNAME ────────────▶ CNAME     │    │   │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘    │   │
+│  │           │                 │                 │            │   │
+│  │           └─────────────────┼─────────────────┘            │   │
+│  │                             ▼                              │   │
+│  │              ┌──────────────────────────┐                  │   │
+│  │              │  Cloudflare Tunnel       │                  │   │
+│  │              │  (Encrypted Connection)  │                  │   │
+│  │              └──────────────┬───────────┘                  │   │
+│  └─────────────────────────────┼──────────────────────────────┘   │
+└────────────────────────────────┼──────────────────────────────────┘
+                                 │ Token Auth
+                                 │ HTTPS/QUIC
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Kubernetes Cluster (k3s)                         │
+│                    192.168.5.200-203 (/22 subnet)                   │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────┐    │
+│  │ Namespace: cloudflare-tunnel                              │    │
+│  │  ┌────────────────────────────────────────────────────┐   │    │
+│  │  │ cloudflared pods (x2 replicas)                     │   │    │
+│  │  │ Routes traffic based on hostname                   │   │    │
+│  │  └─────┬──────────────┬──────────────┬─────────────────   │    │
+│  └────────┼──────────────┼──────────────┼────────────────────┘    │
+│           │              │              │                          │
+│           ▼              ▼              ▼                          │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐                  │
+│  │Namespace:  │  │Namespace:  │  │Namespace:  │                  │
+│  │pudim-dev   │  │luismachado │  │carimbo-vip │                  │
+│  │            │  │  reis-dev  │  │            │                  │
+│  │ ┌────────┐ │  │ ┌────────┐ │  │ ┌────────┐ │                  │
+│  │ │Service │ │  │ │Service │ │  │ │Service │ │                  │
+│  │ │ static │ │  │ │ static │ │  │ │ static │ │                  │
+│  │ │ -site  │ │  │ │ -site  │ │  │ │ -site  │ │                  │
+│  │ │ClusterIP│ │  │ │ClusterIP│ │  │ │ClusterIP│ │                  │
+│  │ └───┬────┘ │  │ └───┬────┘ │  │ └───┬────┘ │                  │
+│  │     │      │  │     │      │  │     │      │                  │
+│  │ ┌───▼────┐ │  │ ┌───▼────┐ │  │ ┌───▼────┐ │                  │
+│  │ │Nginx   │ │  │ │Nginx   │ │  │ │Nginx   │ │                  │
+│  │ │Pods x3 │ │  │ │Pods x3 │ │  │ │Pods x3 │ │                  │
+│  │ └───┬────┘ │  │ └───┬────┘ │  │ └───┬────┘ │                  │
+│  │     │      │  │     │      │  │     │      │                  │
+│  │ ┌───▼────┐ │  │ ┌───▼────┐ │  │ ┌───▼────┐ │                  │
+│  │ │PVC     │ │  │ │PVC     │ │  │ │PVC     │ │                  │
+│  │ │(NFS)   │ │  │ │(NFS)   │ │  │ │(NFS)   │ │                  │
+│  │ │1Gi     │ │  │ │1Gi     │ │  │ │1Gi     │ │                  │
+│  │ └───┬────┘ │  │ └───┬────┘ │  │ └───┬────┘ │                  │
+│  └─────┼──────┘  └─────┼──────┘  └─────┼──────┘                  │
+│        │                │                │                         │
+│        └────────────────┼────────────────┘                         │
+│                         ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │          NFS Server (Master Node: 192.168.5.200)            │  │
+│  │          Shared Storage: /nfs/shared/                       │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐  │
+│  │ Namespace: monitoring                                       │  │
+│  │  Prometheus | Grafana | Loki | Alertmanager | Promtail     │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+
+Legend:
+→  HTTP/HTTPS Traffic Flow
+┌─ Kubernetes Namespace Boundary
+│  Service/Pod/Resource
+```
+
+**Traffic Flow:**
+1. User requests `pudim.dev`, `luismachadoreis.dev`, or `carimbo.vip`
+2. DNS resolves to Cloudflare's network (CNAME → tunnel UUID)
+3. Cloudflare routes to your Cloudflare Tunnel (encrypted, token-authenticated)
+4. Tunnel pods inspect hostname and route to appropriate namespace service
+5. Service load-balances across 3 nginx pod replicas
+6. Nginx serves static content from NFS-backed persistent storage
+
 ## Project Structure
 
 ```
