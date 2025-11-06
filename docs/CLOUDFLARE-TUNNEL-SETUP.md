@@ -206,6 +206,38 @@ ingress:
   - service: http_status:404
 ```
 
+### Redirect Hostnames (add above site rules)
+
+Route legacy domains to the internal redirector service in the `redirects` namespace. Place these entries before the canonical site rules and before the final 404.
+
+```yaml
+# Redirect domains -> redirector service
+- hostname: luismachadoreis.dev.br
+  service: http://redirector.redirects.svc.cluster.local:80
+- hostname: '*.luismachadoreis.dev.br'
+  service: http://redirector.redirects.svc.cluster.local:80
+
+- hostname: pudim.dev.br
+  service: http://redirector.redirects.svc.cluster.local:80
+- hostname: '*.pudim.dev.br'
+  service: http://redirector.redirects.svc.cluster.local:80
+
+- hostname: carimbovip.com.br
+  service: http://redirector.redirects.svc.cluster.local:80
+- hostname: '*.carimbovip.com.br'
+  service: http://redirector.redirects.svc.cluster.local:80
+- hostname: carimbovip.com
+  service: http://redirector.redirects.svc.cluster.local:80
+- hostname: '*.carimbovip.com'
+  service: http://redirector.redirects.svc.cluster.local:80
+```
+
+Internal service URL:
+
+```
+http://redirector.redirects.svc.cluster.local:80
+```
+
 **Key Architecture Points:**
 - Each domain has its own Kubernetes namespace for isolation
 - All sites use the standardized service name `static-site` within their namespace

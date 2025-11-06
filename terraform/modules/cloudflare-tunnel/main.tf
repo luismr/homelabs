@@ -33,6 +33,26 @@ resource "kubernetes_config_map" "tunnel_config" {
       no-autoupdate: true
       
       ingress:
+        # Redirector: additional domains routed to redirects namespace
+        - hostname: luismachadoreis.dev.br
+          service: http://redirector.redirects.svc.cluster.local:80
+        - hostname: '*.luismachadoreis.dev.br'
+          service: http://redirector.redirects.svc.cluster.local:80
+
+        - hostname: pudim.dev.br
+          service: http://redirector.redirects.svc.cluster.local:80
+        - hostname: '*.pudim.dev.br'
+          service: http://redirector.redirects.svc.cluster.local:80
+
+        - hostname: carimbovip.com.br
+          service: http://redirector.redirects.svc.cluster.local:80
+        - hostname: '*.carimbovip.com.br'
+          service: http://redirector.redirects.svc.cluster.local:80
+        - hostname: carimbovip.com
+          service: http://redirector.redirects.svc.cluster.local:80
+        - hostname: '*.carimbovip.com'
+          service: http://redirector.redirects.svc.cluster.local:80
+
         # pudim.dev -> static-site service in pudim-dev namespace
         - hostname: pudim.dev
           service: http://static-site.pudim-dev.svc.cluster.local:80

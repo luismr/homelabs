@@ -398,6 +398,8 @@ terraform output
 - carimbo.vip         → carimbo-vip namespace
 ```
 
+
+
 ### Quick Commands
 
 ```bash
@@ -455,6 +457,26 @@ vagrant ssh master -c "ip addr show"
 
 # Restart networking
 vagrant reload master
+```
+
+### Redirects (nginx-redirector)
+
+- Namespace: `redirects`
+- Internal service: `http://redirector.redirects.svc.cluster.local:80`
+- Purpose: 301 HTTPS redirects from legacy domains to canonical domains. Wildcards mirror subdomains and preserve path/query.
+- Autoscaling: 1–4 pods via HPA (CPU 60%, Memory 70%).
+
+Current rules:
+- `luismachadoreis.dev.br`, `*.luismachadoreis.dev.br` → `luismachadoreis.dev`, `*.luismachadoreis.dev`
+- `pudim.dev.br`, `*.pudim.dev.br` → `pudim.dev`, `*.pudim.dev`
+- `carimbovip.com(.br)`, `*.carimbovip.com(.br)` → `carimbo.vip`, `*.carimbo.vip`
+
+Test inside the cluster:
+
+```bash
+kubectl -n redirects run curl --image=curlimages/curl:8.10.1 --rm -i --restart=Never -- \
+  sh -lc "curl -sSI -H 'Host: blog.pudim.dev.br' 'http://redirector.redirects.svc.cluster.local/some/path?q=1'"
+# Expect Location: https://blog.pudim.dev/some/path?q=1
 ```
 
 ### SSH connection refused

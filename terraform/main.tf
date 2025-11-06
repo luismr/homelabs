@@ -49,3 +49,42 @@ module "carimbo_vip" {
   enable_nfs_storage = var.enable_nfs_storage
   storage_class      = var.storage_class
 }
+
+# Redirects namespace and redirector deployment
+resource "kubernetes_namespace" "redirects" {
+  metadata {
+    name = "redirects"
+    labels = {
+      name       = "redirects"
+      managed-by = "terraform"
+    }
+  }
+}
+
+module "redirects" {
+  source    = "./modules/nginx-redirector"
+  namespace = kubernetes_namespace.redirects.metadata[0].name
+
+  rules = [
+    {
+      sources = ["luismachadoreis.dev.br", "*.luismachadoreis.dev.br"]
+      target  = "luismachadoreis.dev"
+      code    = 301
+    },
+    {
+      sources = ["pudim.dev.br", "*.pudim.dev.br"]
+      target  = "pudim.dev"
+      code    = 301
+    },
+    {
+      sources = [
+        "carimbovip.com.br", "*.carimbovip.com.br",
+        "carimbovip.com",    "*.carimbovip.com",
+      ]
+      target  = "carimbo.vip"
+      code    = 301
+    },
+  ]
+
+  depends_on = [kubernetes_namespace.redirects]
+}

@@ -87,7 +87,11 @@ terraform/
     │   ├── main.tf
     │   ├── variables.tf
     │   └── outputs.tf
-    └── cloudflare-tunnel/             ← Shared tunnel module
+    ├── cloudflare-tunnel/             ← Shared tunnel module
+    │   ├── main.tf
+    │   ├── variables.tf
+    │   └── outputs.tf
+    └── nginx-redirector/              ← Redirects module (301 to canonical domains)
         ├── main.tf
         ├── variables.tf
         └── outputs.tf
@@ -641,4 +645,54 @@ For issues or questions:
 ---
 
 **Managed by Terraform** | **Version**: 1.0 | **Last Updated**: Nov 2025
+
+## Nginx Redirector Module
+
+Path: `terraform/modules/nginx-redirector`
+
+- Inputs
+  - `namespace` (string): Target namespace (e.g., `redirects`)
+  - `name` (string): App name (default: `redirector`)
+  - `replicas` (number): Initial replicas (default: `1`) — HPA controls scaling thereafter
+  - `rules` (list): Redirect rules
+    - `sources` (list[string]): Hostnames; wildcards supported via `*.domain.tld`
+    - `target` (string): Canonical domain (no scheme)
+    - `code` (number, optional): HTTP code (default: `301`)
+  - `min_replicas` (default `1`), `max_replicas` (default `4`)
+  - `target_cpu_utilization_percentage` (default `60`)
+  - `target_memory_utilization_percentage` (default `70`)
+
+- Behavior
+  - Generates Nginx server blocks for apex and wildcard sources
+  - Preserves path and query; always redirects to HTTPS
+  - HPA scales between 1 and 4 pods based on CPU/Mem utilization
+
+- Example
+```hcl
+resource "kubernetes_namespace" "redirects" {
+  metadata { name = "redirects" }
+}
+
+module "redirects" {
+  source    = "../modules/nginx-redirector"
+  namespace = kubernetes_namespace.redirects.metadata[0].name
+
+  rules = [
+    { sources = ["luismachadoreis.dev.br", "*.luismachadoreis.dev.br"], target = "luismachadoreis.dev", code = 301 },
+    { sources = ["pudim.dev.br", "*.pudim.dev.br"],                   target = "pudim.dev",            code = 301 },
+    { sources = ["carimbovip.com.br", "*.carimbovip.com.br", "carimbovip.com", "*.carimbovip.com"], target = "carimbo.vip", code = 301 },
+  ]
+
+  min_replicas = 1
+  max_replicas = 4
+}
+```
+
+- Verify
+```bash
+kubectl -n redirects get deploy redirector
+kubectl -n redirects get hpa redirector-hpa
+kubectl -n redirects run curl --image=curlimages/curl:8.10.1 --rm -i --restart=Never -- \
+  sh -lc "curl -sSI -H 'Host: pudim.dev.br' 'http://redirector.redirects.svc.cluster.local/'"
+```
 
